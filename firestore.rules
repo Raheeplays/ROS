@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - name: string (required)
+    //   - key: string (required)
+    //   - wallpaper: string (optional)
+    //   - darkMode: bool (optional)
+    //   - lastLogin: timestamp (optional)
+    //
+    // Collection: appData
+    // Document ID: {dataId}
+    // Fields:
+    //   - userId: string (required)
+    //   - appId: string (required)
+    //   - data: map (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'key']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             data.key is string && data.key.size() > 0 && data.key.size() < 50 &&
+             // Only allow isAdmin: true if the name and key match the admin credentials
+             (!('isAdmin' in data) || (data.isAdmin == (data.name.lower() == 'rahee' && data.key == '786')));
+    }
+
+    function isValidAppData(data) {
+      return data.keys().hasAll(['userId', 'appId', 'data']) &&
+             data.userId == request.auth.uid &&
+             data.appId is string && data.appId.size() > 0 && data.appId.size() < 50 &&
+             data.data is map && data.data.size() < 100; // Limit number of fields in map
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
+
+      match /askrahee_messages/{messageId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /family_messages/{messageId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /apps/{appId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    match /appData/{dataId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidAppData(request.resource.data);
+      allow update: if isDocOwner() && isValidAppData(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+  }
+}

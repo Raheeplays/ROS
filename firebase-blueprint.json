@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Stores user settings and session information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "User's display name." },
+        "key": { "type": "string", "description": "User's login key." },
+        "wallpaper": { "type": "string", "description": "URL of the desktop wallpaper." },
+        "darkMode": { "type": "boolean", "description": "Whether dark mode is enabled." },
+        "isAdmin": { "type": "boolean", "description": "Whether the user is an admin." },
+        "lastLogin": { "type": "string", "format": "date-time", "description": "Last login timestamp." }
+      },
+      "required": ["name", "key"]
+    },
+    "AppStorage": {
+      "title": "App Storage",
+      "description": "Generic storage for app-specific data.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner of the data." },
+        "appId": { "type": "string", "description": "ID of the app." },
+        "data": { "type": "object", "description": "App-specific JSON data." }
+      },
+      "required": ["userId", "appId", "data"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents."
+    },
+    "/appData/{dataId}": {
+      "schema": "AppStorage",
+      "description": "Generic app data storage."
+    }
+  }
+}
